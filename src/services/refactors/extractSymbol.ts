@@ -1007,11 +1007,8 @@ namespace ts.refactor.extractSymbol {
 
         const checker = context.program.getTypeChecker();
 
-        // Make a unique name for the extracted variable
         const file = scope.getSourceFile();
-        const localNameText = isPropertyAccessExpression(node) && !isClassLike(scope) && !checker.resolveName(node.name.text, node, SymbolFlags.Value, /*excludeGlobals*/ false) && !isPrivateIdentifier(node.name) && !isKeyword(node.name.originalKeywordKind!)
-            ? node.name.text
-            : getUniqueName(isClassLike(scope) ? "newProperty" : "newLocal", file);
+        const localNameText = getLocalNameText();
         const isJS = isInJSFile(scope);
 
         let variableType = isJS || !checker.isContextSensitive(node)
@@ -1179,6 +1176,28 @@ namespace ts.refactor.extractSymbol {
                     initializer.body);
             }
             return { variableType, initializer };
+        }
+
+        function getLocalNameText(): string {
+            // Make a unique name for the extracted variable
+            return tryGetPropertyAccessLocalNameText() || getFallbackLocalNameText();
+        }
+
+        function tryGetPropertyAccessLocalNameText(): string | undefined {
+            if (!isPropertyAccessExpression(node)) return;
+            // In a class-like scope, the resulting name may conflict with an existing property declaration
+            if (isClassLike(scope)) return;
+            // A private identifier doesn't have `originalKeywordKind` to check for clash with reserved words
+            if (isPrivateIdentifier(node.name)) return;
+            // Do not use if name clashes with existing variables
+            if (checker.resolveName(node.name.text, node, SymbolFlags.Value, /*excludeGlobals*/ false)) return;
+            // Do not use if name is a reserved word
+            if (isKeyword(node.name.originalKeywordKind!)) return;
+            return node.name.text;
+        }
+
+        function getFallbackLocalNameText(): string {
+            return getUniqueName(isClassLike(scope) ? "newProperty" : "newLocal", file);
         }
     }
 
