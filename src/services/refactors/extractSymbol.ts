@@ -1180,13 +1180,37 @@ namespace ts.refactor.extractSymbol {
 
         function getLocalNameText(): string {
             // Make a unique name for the extracted variable
-            return tryInferLocalNameTextFromPropertyAccess() || getFallbackLocalNameText();
+            return tryInferLocalNameTextFromPropertyAccess() || tryInferLocalNameTextFromType() || getFallbackLocalNameText();
         }
 
         function tryInferLocalNameTextFromPropertyAccess(): string | undefined {
             if (!isPropertyAccessExpression(node)) return;
             if (isPrivateIdentifier(node.name)) return tryUseInferredLocalNameText(node.name.text.slice(1));
             return tryUseInferredLocalNameText(node.name.text);
+        }
+
+        function tryInferLocalNameTextFromType(): string | undefined {
+            const typeNameParts: string[] = [];
+            const type = checker.getTypeAtLocation(node);
+            let typeNode = type ? checker.typeToTypeNode(type, scope, NodeBuilderFlags.NoTruncation) : undefined;
+            while (typeNode) {
+                if (isTypeReferenceNode(typeNode)) {
+                    const proposedNamePart = isQualifiedName(typeNode.typeName) ? typeNode.typeName.right.text : typeNode.typeName.text;
+                    if (!/^[A-Z]/.test(proposedNamePart)) break;
+                    typeNameParts.push(proposedNamePart);
+                    typeNode = typeNode.typeArguments && typeNode.typeArguments.length === 1 ? typeNode.typeArguments[0] : undefined;
+                }
+                else if (isArrayTypeNode(typeNode)) {
+                    typeNameParts.push("Array");
+                    typeNode = typeNode.elementType;
+                }
+                else {
+                    break;
+                }
+            }
+            if (typeNameParts.length === 0) return;
+            const proposedName = typeNameParts.reverse().join("").replace(/^[A-Z]/, (startingLetter) => startingLetter.toLowerCase());
+            return tryUseInferredLocalNameText(proposedName);
         }
 
         function tryUseInferredLocalNameText(proposedName: string): string | undefined {

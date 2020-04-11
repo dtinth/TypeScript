@@ -295,10 +295,31 @@ switch (1) {
 
         testExtractConstant("extractConstant_PropertyName_PrivateIdentifier",
             `[#|this.#somePrivateProperty|].z();`);
+
+        testExtractConstant("extractConstant_TypeName",
+            `class MyThing {}
+f([#|new MyThing()|]);`);
+
+        testExtractConstant("extractConstant_TypeName_Array",
+            `const f = () => [1, 2, 3];
+g([#|f()|]);`, /*includeLib*/ true);
+
+        testExtractConstant("extractConstant_TypeName_ArrayOfObjects",
+            `class MyThing { }
+const f = () => [new MyThing()];
+g([#|f()|]);`, /*includeLib*/ true);
+
+        testExtractConstant("extractConstant_TypeName_Generic",
+            `class MyThing { }
+class Box<T> {
+    constructor(public value: T) { }
+}
+f([#|new Box(new MyThing())|]);`);
     });
 
-    function testExtractConstant(caption: string, text: string) {
-        testExtractSymbol(caption, text, "extractConstant", Diagnostics.Extract_constant);
+    /** @param includeLib libFile is expensive to parse repeatedly - set to true only when required */
+    function testExtractConstant(caption: string, text: string, includeLib = false) {
+        testExtractSymbol(caption, text, "extractConstant", Diagnostics.Extract_constant, includeLib);
     }
 
     function testExtractConstantFailed(caption: string, text: string) {
