@@ -1185,8 +1185,7 @@ namespace ts.refactor.extractSymbol {
 
         function tryInferLocalNameTextFromPropertyAccess(): string | undefined {
             if (!isPropertyAccessExpression(node)) return;
-            // A private identifier doesn't have `originalKeywordKind` to check for clash with reserved words
-            if (isPrivateIdentifier(node.name)) return;
+            if (isPrivateIdentifier(node.name)) return tryUseInferredLocalNameText(node.name.text.slice(1));
             return tryUseInferredLocalNameText(node.name.text);
         }
 

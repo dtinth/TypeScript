@@ -292,6 +292,9 @@ switch (1) {
 
         testExtractConstant("extractConstant_PropertyName_PrivateIdentifierKeyword",
             `[#|this.#if|].z();`);
+
+        testExtractConstant("extractConstant_PropertyName_PrivateIdentifier",
+            `[#|this.#somePrivateProperty|].z();`);
     });
 
     function testExtractConstant(caption: string, text: string) {
