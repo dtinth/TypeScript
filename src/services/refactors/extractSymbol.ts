@@ -1193,6 +1193,17 @@ namespace ts.refactor.extractSymbol {
             const typeNameParts: string[] = [];
             const type = checker.getTypeAtLocation(node);
             let typeNode = type ? checker.typeToTypeNode(type, scope, NodeBuilderFlags.NoTruncation) : undefined;
+            let suffix = "";
+            if (typeNode && isUnionTypeNode(typeNode) && typeNode.types.length === 2) {
+                if (typeNode.types[1].kind === SyntaxKind.NullKeyword) {
+                    suffix = "OrNull";
+                    typeNode = typeNode.types[0];
+                }
+                else if (typeNode.types[1].kind === SyntaxKind.UndefinedKeyword) {
+                    suffix = "OrUndefined";
+                    typeNode = typeNode.types[0];
+                }
+            }
             while (typeNode) {
                 if (isTypeReferenceNode(typeNode)) {
                     const proposedNamePart = isQualifiedName(typeNode.typeName) ? typeNode.typeName.right.text : typeNode.typeName.text;
@@ -1209,7 +1220,7 @@ namespace ts.refactor.extractSymbol {
                 }
             }
             if (typeNameParts.length === 0) return;
-            const proposedName = typeNameParts.reverse().join("").replace(/^[A-Z]/, (startingLetter) => startingLetter.toLowerCase());
+            const proposedName = typeNameParts.reverse().join("").replace(/^[A-Z]/, (startingLetter) => startingLetter.toLowerCase()) + suffix;
             return tryUseInferredLocalNameText(proposedName);
         }
 

@@ -297,8 +297,20 @@ switch (1) {
             `[#|this.#somePrivateProperty|].z();`);
 
         testExtractConstant("extractConstant_TypeName",
-            `class MyThing {}
+            `class MyThing { }
 f([#|new MyThing()|]);`);
+
+        // XXX: Unfortunately I cannot run this with strictNullChecks on
+        testExtractConstant("extractConstant_TypeName_OrNull",
+            `class MyThing { }
+const f = (): MyThing | null => whatever;
+g([#|f()|]);`);
+
+        // XXX: Unfortunately I cannot run this with strictNullChecks on
+        testExtractConstant("extractConstant_TypeName_OrUndefined",
+            `class MyThing { }
+const f = (): MyThing | undefined => whatever;
+g([#|f()|]);`);
 
         testExtractConstant("extractConstant_TypeName_Array",
             `const f = () => [1, 2, 3];
