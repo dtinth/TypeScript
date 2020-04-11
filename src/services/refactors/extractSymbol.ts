@@ -1180,20 +1180,24 @@ namespace ts.refactor.extractSymbol {
 
         function getLocalNameText(): string {
             // Make a unique name for the extracted variable
-            return tryGetPropertyAccessLocalNameText() || getFallbackLocalNameText();
+            return tryInferLocalNameTextFromPropertyAccess() || getFallbackLocalNameText();
         }
 
-        function tryGetPropertyAccessLocalNameText(): string | undefined {
+        function tryInferLocalNameTextFromPropertyAccess(): string | undefined {
             if (!isPropertyAccessExpression(node)) return;
-            // In a class-like scope, the resulting name may conflict with an existing property declaration
-            if (isClassLike(scope)) return;
             // A private identifier doesn't have `originalKeywordKind` to check for clash with reserved words
             if (isPrivateIdentifier(node.name)) return;
+            return tryUseInferredLocalNameText(node.name.text);
+        }
+
+        function tryUseInferredLocalNameText(proposedName: string): string | undefined {
+            // In a class-like scope, the resulting name may conflict with an existing property declaration
+            if (isClassLike(scope)) return;
             // Do not use if name clashes with existing variables
-            if (checker.resolveName(node.name.text, node, SymbolFlags.Value, /*excludeGlobals*/ false)) return;
+            if (checker.resolveName(proposedName, node, SymbolFlags.Value, /*excludeGlobals*/ false)) return;
             // Do not use if name is a reserved word
-            if (isKeyword(node.name.originalKeywordKind!)) return;
-            return node.name.text;
+            if (isKeyword(createIdentifier(proposedName).originalKeywordKind!)) return;
+            return proposedName;
         }
 
         function getFallbackLocalNameText(): string {
